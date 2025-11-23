@@ -7,7 +7,8 @@
         "services": [
             "HandlerService",
             "LoggerService",
-            "StatsService"
+            "StatsService",
+            "ReflectionService"
         ]
     },
     "routing": {
@@ -20,14 +21,14 @@
                 "outboundTag": "block"
             },
             {
-                "inboundTag": ["api-in"],
+                "inboundTag": ["api"],
                 "outboundTag": "api"
             }
         ]
     },
     "inbounds": [
         {
-            "tag": "vless-api",
+            "tag": "vless-in",
             "listen": "0.0.0.0",
             "port": 80,
             "protocol": "vless",
@@ -67,7 +68,7 @@
             "settings": {
                 "address": "127.0.0.1"
             },
-            "tag": "api-in"
+            "tag": "api"
         }
     ],
     "outbounds": [
