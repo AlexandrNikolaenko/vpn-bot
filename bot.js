@@ -80,7 +80,7 @@ bot.command('get_url', async (ctx) => {
       if (user.success) {
         await pool.addKey({userId: ctx.from.id, ...user});
   
-        await ctx.reply('Ваш URL: \n\n' + user.url);
+        await ctx.reply('Ваш URL: \n\n<code>' + user.url + '</code>',{ parse_mode: 'HTML',  });
       } else {
         throw new Error('Не удалось добавить пользователя')
       }
