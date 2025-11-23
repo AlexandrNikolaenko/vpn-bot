@@ -1,7 +1,7 @@
 const { Telegraf, Markup } = require("telegraf");
 const fs = require("fs");
 const path = require("path");
-const api = require('./api/api.js');
+const vpnapi = require('./api/vpnapi.js');
 const pool = require('./api/db.js');
 require("dotenv").config();
 
@@ -69,6 +69,51 @@ bot.action('how_to_use', async (ctx) => {
   await ctx.reply(instruction, { parse_mode: 'HTML',  });
 });
 
+bot.command('get_url', async (ctx) => {
+  await pool.saveUser(ctx);
+
+  try {
+    const url = await pool.getKey(ctx.from.id);
+    if (url.status == 'empty') {
+      const user = await vpnapi.addUser(ctx.from.id);
+  
+      if (user.success) {
+        await pool.addKey({userId: ctx.from.id, ...user});
+  
+        await ctx.reply('Ваш URL: \n\n' + user.url);
+      } else {
+        throw new Error('Не удалось добавить пользователя')
+      }
+    } else {
+      await ctx.reply('У вас уже есть URL.\nВаш URL: \n\n' + url.url);
+    }
+  } catch(e) {
+    console.error(e);
+    await ctx.reply('К сожалению не получилось создать новый ключ:( \nПопробуйте позже или обратитесь в поддержку')
+  }
+})
+
+bot.command('update_url', async (ctx) => {
+  await pool.saveUser(ctx);
+
+  try {
+    const user = await vpnapi.addUser(ctx.from.id);
+    
+    if (user.success) {
+      const {uuid} = await pool.updateKey({userId: ctx.from.id, ...user});
+
+      await ctx.reply('Ваш новый URL: \n' + user.url);
+
+      await vpnapi.deleteUser(uuid);
+    } else {
+      throw new Error('Не удалось добавить пользователя')
+    }
+  } catch(e) {
+    console.error(e);
+    await ctx.reply('К сожалению не получилось создать новый ключ:( \nПопробуйте позже или обратитесь в поддержку')
+  }
+})
+
 // Храним состояние, ждём сообщение для рассылки
 let waitingForBroadcast = false;
 
@@ -129,7 +174,8 @@ async function broadcastInBackground(ctx) {
         } catch (err) {
           if (err.response?.error_code === 403) {
             removed++;
-            await pool.deleteChat(chat.chat_id);
+            const uuid = await pool.deleteChat(chat.chat_id);
+            await vpnapi.deleteUser(uuid);
             console.log('user deleted: '+chat.chat_id);
           } else {
             console.log(err);

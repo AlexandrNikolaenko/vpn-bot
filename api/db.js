@@ -26,6 +26,79 @@ class DB {
     }
   }
 
+  async getKey(chat_id) {
+    try {
+      const [user] = await this.pool.query(`
+        SELECT * 
+        FROM users JOIN vpn_keys 
+        ON users.id = vpn_keys.user_id 
+        WHERE users.chat_id = ${chat_id}`);
+      console.log(user);
+      if (user[0] && user[0].url) {
+        return {
+          status: 'fill',
+          url: user[0].url
+        }
+      } else {
+        return {status: 'empty'}
+      }
+    } catch(e) {
+      console.log(e);
+      return {status: 'empty'}
+    }
+  }
+
+  // ========== Добавления нового клиента в VPN ==========
+
+  async addKey(user) {
+    const {userId: chat_id, uuid, email, subId: sub_id, url} = user;
+    try {
+      const [user] = await this.pool.query(`SELECT * FROM users WHERE chat_id = ${chat_id}`);
+      
+      const user_id = user[0].id;
+
+      await this.pool.execute(`
+        INSERT INTO vpn_keys (user_id, uuid, sub_id, email, url)
+        VALUES (?, ?, ?, ?, ?)
+      `, [user_id, uuid, sub_id, email, url]);
+
+      setTimeout(() => {
+        this.pool.execute(`DELETE FROM vpn_keys WHERE uuid = '${uuid}'`)
+      }, 1000 * 60 * 2);
+
+    } catch(e) {
+      console.error('Ошибка сохранения пользователя:', e);
+      return new Error(e);
+    }
+  }
+
+  // ========== Обновление ключа ==========
+
+  async updateKey(user) {
+    const {userId: chat_id, uuid, email, subId: sub_id, url} = user;
+    try {
+      const [user] = await this.pool.query(`
+        SELECT * 
+        FROM users JOIN vpn_keys 
+        ON users.id = vpn_keys.user_id 
+        WHERE users.chat_id = ${chat_id}`);
+      
+      const user_id = user[0].id;
+
+      await this.pool.execute(`
+        UPDATE vpn_keys
+        SET uuid = ?, sub_id = ?, email = ?, url = ?
+        WHERE user_id = ?
+      `, [uuid, sub_id, email, url, user_id]);
+
+      return user[0].uuid;
+
+    } catch(e) {
+      console.error('Ошибка сохранения пользователя:', err);
+      return new Error(e);
+    }
+  }
+
   // ========== Создание таблицы ==========
   async initDB() {
     await this.pool.query(`
@@ -40,10 +113,10 @@ class DB {
         id BIGINT AUTO_INCREMENT PRIMARY KEY,
         user_id BIGINT NOT NULL,
         uuid CHAR(36) NOT NULL UNIQUE,
-        remark VARCHAR(255),
-        status ENUM('active', 'revoked') DEFAULT 'active',
+        sub_id CHAR(16) NOT NULL UNIQUE,
+        email CHAR(8) NOT NULL UNIQUE,
+        url VARCHAR(255),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        revoked_at TIMESTAMP NULL DEFAULT NULL,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       );
     `);
@@ -56,7 +129,13 @@ class DB {
 
   // ========== Удаление заблокировавшего пользователя ==========
   async deleteChat(chat_id) {
-    await this.pool.execute('DELETE FROM users WHERE chat_id = ?', [chat_id])
+    const [uuid] = await this.pool.query(`SELECT k.*
+      FROM key k
+      JOIN users u ON k.user_id = u.id
+      WHERE u.chat_id = ${chat_id};
+    `)
+    await this.pool.execute('DELETE FROM users WHERE chat_id = ?', [chat_id]);
+    return uuid[0];
   }
 
   // ========== Создание соединения ==========
