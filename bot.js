@@ -125,11 +125,12 @@ bot.command('broadcast', async (ctx) => {
 });
 
 
-bot.on("text", async (ctx) => {
-  await pool.saveUser();
+
+// При получении любого сообщения проверяем, ждёт ли админ рассылку
+bot.on('message', async (ctx) => {
   if ((ctx.from.id == ADMIN_ID || ctx.from.id == DEVELOPER_ID) && waitingForBroadcast) {
     waitingForBroadcast = false;
-
+    
     broadcastInBackground(ctx);
     return;
   }
@@ -146,14 +147,26 @@ bot.on("text", async (ctx) => {
   await ctx.reply(instruction, { parse_mode: 'HTML',  });
 });
 
-// При получении любого сообщения проверяем, ждёт ли админ рассылку
-bot.on('message', async (ctx) => {
-  if ((ctx.from.id == ADMIN_ID || ctx.from.id == DEVELOPER_ID) && waitingForBroadcast) {
-    waitingForBroadcast = false;
+// bot.on("text", async (ctx) => {
+//   await pool.saveUser();
+//   if ((ctx.from.id == ADMIN_ID || ctx.from.id == DEVELOPER_ID) && waitingForBroadcast) {
+//     waitingForBroadcast = false;
 
-    broadcastInBackground(ctx);
-  }
-});
+//     broadcastInBackground(ctx);
+//     return;
+//   }
+//   await ctx.reply("I've got it");
+//   const instruction = `📘 <b>Как пользоваться ботом:</b>
+
+// 1️⃣ Установи любое VPN приложение, которое поддерживает VLESS протокол. Мы рекомендуем использовать <a href="https://en.v2rayn.org/download/">v2rayN</a> 
+// 2️⃣ Используй команду /get_url, чтобы получить ссылку конфигурации
+// 3️⃣ Скопируй ссылку и укажи ее в скачанном приложении
+// 4️⃣ Заходи раз в N дней обновлять ссылку командой /update_url  
+
+// ❗Если не удается получить или обновить ссылку — попробуй позже или напиши в поддержку.`;
+
+//   await ctx.reply(instruction, { parse_mode: 'HTML',  });
+// });
 
 async function broadcastInBackground(ctx) {
   try {
