@@ -78,7 +78,7 @@ class DB {
     const {userId: chat_id, uuid, email, subId: sub_id, url} = user;
     try {
       const [user] = await this.pool.query(`
-        SELECT * 
+        SELECT vpn_keys.* 
         FROM users JOIN vpn_keys 
         ON users.id = vpn_keys.user_id 
         WHERE users.chat_id = ${chat_id}`);
@@ -94,7 +94,7 @@ class DB {
       return user[0].uuid;
 
     } catch(e) {
-      console.error('Ошибка сохранения пользователя:', err);
+      console.error('Ошибка сохранения пользователя:', e);
       return new Error(e);
     }
   }
