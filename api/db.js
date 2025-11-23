@@ -77,13 +77,19 @@ class DB {
   async updateKey(user) {
     const {userId: chat_id, uuid, email, subId: sub_id, url} = user;
     try {
-      const [user] = await this.pool.query(`
+      const [lastUser] = await this.pool.query(`
         SELECT vpn_keys.* 
         FROM users JOIN vpn_keys 
         ON users.id = vpn_keys.user_id 
         WHERE users.chat_id = ${chat_id}`);
+
+      console.log(lastUser);
       
-      const user_id = user[0].id;
+      if (!lastUser[0]) {
+        await this.addKey(user);
+        return;
+      }
+      const user_id = lastUser[0].user_id;
 
       await this.pool.execute(`
         UPDATE vpn_keys
@@ -91,7 +97,7 @@ class DB {
         WHERE user_id = ?
       `, [uuid, sub_id, email, url, user_id]);
 
-      return user[0].uuid;
+      return lastUser[0].uuid;
 
     } catch(e) {
       console.error('Ошибка сохранения пользователя:', e);
@@ -129,13 +135,13 @@ class DB {
 
   // ========== Удаление заблокировавшего пользователя ==========
   async deleteChat(chat_id) {
-    const [uuid] = await this.pool.query(`SELECT k.*
-      FROM key k
+    const [keys] = await this.pool.query(`SELECT k.*
+      FROM vpn_keys k
       JOIN users u ON k.user_id = u.id
       WHERE u.chat_id = ${chat_id};
     `)
     await this.pool.execute('DELETE FROM users WHERE chat_id = ?', [chat_id]);
-    return uuid[0];
+    return keys[0].uuid;
   }
 
   // ========== Создание соединения ==========

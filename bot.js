@@ -17,8 +17,8 @@ bot.start(async (ctx) => {
     "👋 Привет, @" +
       ctx.from.username +
       "! \n" +
-      "Я помогаю скачать видео без водяного знака и в хорошем качестве из TikTok, Instagram, YouTube Shorts и Pinterest. \n \n" +
-      "<i>Присылай ссылку на ролик и через мгновение получишь видео без водяного знака.</i> \n \n" +
+      "Я выдаю ссылки для подключения к сервису VPN по VLESS протоколу \n \n" +
+      "<i>Отправлю тебе ссыдку для VPN, как только попросишь (/get_url, /update_url)</i> \n \n" +
       "Если возникла техническая ошибка, пиши сюда — @AliBabagg. \n" +
       "<b>Исправим как можно скорее! 🔧</b> \n",
     {
@@ -43,12 +43,12 @@ bot.hears('📘 Инструкция',  async (ctx) => {
   await pool.saveUser(ctx);
   const instruction = `📘 <b>Как пользоваться ботом:</b>
 
-1️⃣ Найди видео в TikTok, Instagram, YouTube Shorts или Pinterest.  
-2️⃣ Скопируй ссылку на видео.  
-3️⃣ Отправь ссылку сюда, в чат со мной.  
-4️⃣ Через несколько секунд получишь файл без водяного знака! 🎉  
+1️⃣ Установи любое VPN приложение, которое поддерживает VLESS протокол. Мы рекомендуем использовать <a href="https://en.v2rayn.org/download/">v2rayN</a> 
+2️⃣ Используй команду /get_url, чтобы получить ссылку конфигурации
+3️⃣ Скопируй ссылку и укажи ее в скачанном приложении
+4️⃣ Заходи раз в N дней обновлять ссылку командой /update_url  
 
-❗Если видео слишком большое или не загружается — попробуй позже или напиши в поддержку.`;
+❗Если не удается получить или обновить ссылку — попробуй позже или напиши в поддержку.`;
 
   await ctx.reply(instruction, { parse_mode: 'HTML',  });
 });
@@ -59,12 +59,12 @@ bot.action('how_to_use', async (ctx) => {
 
   const instruction = `📘 <b>Как пользоваться ботом:</b>
 
-1️⃣ Найди видео в TikTok, Instagram, YouTube Shorts или Pinterest.  
-2️⃣ Скопируй ссылку на видео.  
-3️⃣ Отправь ссылку сюда, в чат со мной.  
-4️⃣ Через несколько секунд получишь файл без водяного знака! 🎉  
+1️⃣ Установи любое VPN приложение, которое поддерживает VLESS протокол. Мы рекомендуем использовать <a href="https://en.v2rayn.org/download/">v2rayN</a> 
+2️⃣ Используй команду /get_url, чтобы получить ссылку конфигурации
+3️⃣ Скопируй ссылку и укажи ее в скачанном приложении
+4️⃣ Заходи раз в N дней обновлять ссылку командой /update_url  
 
-❗Если видео слишком большое или не загружается — попробуй позже или напиши в поддержку.`;
+❗Если не удается получить или обновить ссылку — попробуй позже или напиши в поддержку.`;
 
   await ctx.reply(instruction, { parse_mode: 'HTML',  });
 });
@@ -85,7 +85,7 @@ bot.command('get_url', async (ctx) => {
         throw new Error('Не удалось добавить пользователя')
       }
     } else {
-      await ctx.reply('У вас уже есть URL.\nВаш URL: \n\n' + url.url);
+      await ctx.reply('У вас уже есть URL.\nВаш URL: \n\n<code>' + url.url + '</code>',{ parse_mode: 'HTML',  });
     }
   } catch(e) {
     console.error(e);
@@ -100,9 +100,9 @@ bot.command('update_url', async (ctx) => {
     const user = await vpnapi.addUser(ctx.from.id);
     
     if (user.success) {
-      const {uuid} = await pool.updateKey({userId: ctx.from.id, ...user});
+      const uuid = await pool.updateKey({userId: ctx.from.id, ...user});
 
-      await ctx.reply('Ваш новый URL: \n' + user.url);
+      await ctx.reply('Ваш новый URL: \n\n<code>' + user.url + '</code>',{ parse_mode: 'HTML',  });
 
       await vpnapi.deleteUser(uuid);
     } else {
@@ -126,6 +126,7 @@ bot.command('broadcast', async (ctx) => {
 
 
 bot.on("text", async (ctx) => {
+  await pool.saveUser();
   if ((ctx.from.id == ADMIN_ID || ctx.from.id == DEVELOPER_ID) && waitingForBroadcast) {
     waitingForBroadcast = false;
 
@@ -133,6 +134,16 @@ bot.on("text", async (ctx) => {
     return;
   }
   await ctx.reply("I've got it");
+  const instruction = `📘 <b>Как пользоваться ботом:</b>
+
+1️⃣ Установи любое VPN приложение, которое поддерживает VLESS протокол. Мы рекомендуем использовать <a href="https://en.v2rayn.org/download/">v2rayN</a> 
+2️⃣ Используй команду /get_url, чтобы получить ссылку конфигурации
+3️⃣ Скопируй ссылку и укажи ее в скачанном приложении
+4️⃣ Заходи раз в N дней обновлять ссылку командой /update_url  
+
+❗Если не удается получить или обновить ссылку — попробуй позже или напиши в поддержку.`;
+
+  await ctx.reply(instruction, { parse_mode: 'HTML',  });
 });
 
 // При получении любого сообщения проверяем, ждёт ли админ рассылку
