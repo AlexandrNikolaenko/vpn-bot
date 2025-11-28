@@ -210,7 +210,13 @@ async function createUrl(ctx) {
         throw new Error('Не удалось добавить пользователя')
       }
     } else {
-      await ctx.reply('У вас уже есть URL.\nВаш URL: \n\n<pre>' + url.url + '</pre>',{ parse_mode: 'HTML',  });
+      await ctx.reply('У вас уже есть URL.\nВаш URL: \n\n<pre>' + url.url + '</pre>',{ parse_mode: 'HTML', ...Markup.keyboard([
+            ['Получить новый ключ'],
+            ['Android', 'IOS'],
+            ['MacOS', 'Windows']
+          ])
+          .resize()
+          .oneTime(false)});
     }
   } catch(e) {
     console.error(e);
