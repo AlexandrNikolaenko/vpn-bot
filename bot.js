@@ -11,162 +11,47 @@ const bot = new Telegraf(process.env.token);
 const ADMIN_ID = parseInt(process.env.ADMIN_ID, 10);
 const DEVELOPER_ID = parseInt(process.env.DEVELOPER_ID, 10);
 
-bot.start(async (ctx) => {
-  await pool.saveUser(ctx);
-  await ctx.reply(
-    "👋 Привет, @" +
-      ctx.from.username +
-      "! \n" +
-      "Я выдаю ссылки для подключения к сервису VPN по VLESS протоколу \n \n" +
-      "<i>Отправлю тебе ссыдку для VPN, как только попросишь (/get_url, /update_url)</i> \n \n" +
-      "Если возникла техническая ошибка, пиши сюда — @AliBabagg. \n" +
-      "<b>Исправим как можно скорее! 🔧</b> \n",
-    {
-      parse_mode: "HTML",
-      ...Markup.inlineKeyboard([
-        [Markup.button.callback('📘 Инструкция', 'how_to_use')]
-      ])
-    },
-  );
-
-  await ctx.reply(
-    'Вы можете в любой момент открыть меню:',
-    Markup.keyboard([
-      ['📘 Инструкция']
-    ])
-    .resize() // чтобы кнопка подстроилась под экран
-    .oneTime(false) // чтобы не пропадала после нажатия
-  );
-});
-
-bot.hears('📘 Инструкция',  async (ctx) => {
-  await pool.saveUser(ctx);
-  const instruction = `📘 <b>Как пользоваться ботом:</b>
-
-1️⃣ Установи любое VPN приложение, которое поддерживает VLESS протокол. Мы рекомендуем использовать <a href="https://en.v2rayn.org/download/">v2rayN</a> 
-2️⃣ Используй команду /get_url, чтобы получить ссылку конфигурации
-3️⃣ Скопируй ссылку и укажи ее в скачанном приложении
-4️⃣ Заходи раз в N дней обновлять ссылку командой /update_url  
-
-❗Если не удается получить или обновить ссылку — попробуй позже или напиши в поддержку.`;
-
-  await ctx.reply(instruction, { parse_mode: 'HTML',  });
-});
-
-bot.action('how_to_use', async (ctx) => {
-  await pool.saveUser(ctx);
-  await ctx.answerCbQuery();
-
-  const instruction = `📘 <b>Как пользоваться ботом:</b>
-
-1️⃣ Установи любое VPN приложение, которое поддерживает VLESS протокол. Мы рекомендуем использовать <a href="https://en.v2rayn.org/download/">v2rayN</a> 
-2️⃣ Используй команду /get_url, чтобы получить ссылку конфигурации
-3️⃣ Скопируй ссылку и укажи ее в скачанном приложении
-4️⃣ Заходи раз в N дней обновлять ссылку командой /update_url  
-
-❗Если не удается получить или обновить ссылку — попробуй позже или напиши в поддержку.`;
-
-  await ctx.reply(instruction, { parse_mode: 'HTML',  });
-});
-
-bot.command('get_url', async (ctx) => {
-  await pool.saveUser(ctx);
-
+async function sendKeyReminders() {
   try {
-    const url = await pool.getKey(ctx.from.id);
-    if (url.status == 'empty') {
-      const user = await vpnapi.addUser(ctx.from.id);
-  
-      if (user.success) {
-        await pool.addKey({userId: ctx.from.id, ...user});
-  
-        await ctx.reply('Ваш URL: \n\n<code>' + user.url + '</code>',{ parse_mode: 'HTML',  });
-      } else {
-        throw new Error('Не удалось добавить пользователя')
+    // Берём всех пользователей с выданным ключом, которые ещё не получили напоминание
+    const [users] = await pool.pool.query(
+      `SELECT id, chat_id, last_key_at, is_reminded 
+       FROM users 
+       WHERE last_key_at IS NOT NULL AND is_reminded = 0`
+    );
+
+    const now = new Date();
+
+    for (const user of users) {
+      const lastKey = new Date(user.last_key_at);
+      const reminderDate = new Date(lastKey.getTime() + 5 * 1000 * 60 * 60 * 24); // через 5 дней
+
+      if (now >= reminderDate) {
+        try {
+          await bot.telegram.sendMessage(
+            user.chat_id,
+            "⚠ Ваш VPN ключ скоро истечёт! Через 2 дня его нужно будет обновить."
+          );
+
+          // помечаем, что уведомление отправлено
+          await pool.pool.query(
+            `UPDATE users SET is_reminded = 1 WHERE id = ?`,
+            [user.id]
+          );
+
+          console.log(`Напоминание отправлено пользователю ${user.chat_id}`);
+        } catch (e) {
+          console.error("Ошибка отправки напоминания:", e);
+        }
       }
-    } else {
-      await ctx.reply('У вас уже есть URL.\nВаш URL: \n\n<code>' + url.url + '</code>',{ parse_mode: 'HTML',  });
     }
-  } catch(e) {
-    console.error(e);
-    await ctx.reply('К сожалению не получилось создать новый ключ:( \nПопробуйте позже или обратитесь в поддержку')
+  } catch (e) {
+    console.error("Ошибка при проверке пользователей для напоминаний:", e);
   }
-})
+}
 
-bot.command('update_url', async (ctx) => {
-  await pool.saveUser(ctx);
-
-  try {
-    const user = await vpnapi.addUser(ctx.from.id);
-    
-    if (user.success) {
-      const uuid = await pool.updateKey({userId: ctx.from.id, ...user});
-
-      await ctx.reply('Ваш новый URL: \n\n<code>' + user.url + '</code>',{ parse_mode: 'HTML',  });
-
-      await vpnapi.deleteUser(uuid);
-    } else {
-      throw new Error('Не удалось добавить пользователя')
-    }
-  } catch(e) {
-    console.error(e);
-    await ctx.reply('К сожалению не получилось создать новый ключ:( \nПопробуйте позже или обратитесь в поддержку')
-  }
-})
-
-// Храним состояние, ждём сообщение для рассылки
-let waitingForBroadcast = false;
-
-// Команда для старта рассылки
-bot.command('broadcast', async (ctx) => {
-  if (ctx.from.id !== ADMIN_ID && ctx.from.id !== DEVELOPER_ID) return;
-  waitingForBroadcast = true;
-  await ctx.reply('📣 Отправь сообщение, которое нужно разослать (может быть текст, фото, видео, документ, сообщение с кнопками).');
-});
-
-
-
-// При получении любого сообщения проверяем, ждёт ли админ рассылку
-bot.on('message', async (ctx) => {
-  if ((ctx.from.id == ADMIN_ID || ctx.from.id == DEVELOPER_ID) && waitingForBroadcast) {
-    waitingForBroadcast = false;
-    
-    broadcastInBackground(ctx);
-    return;
-  }
-  await ctx.reply("I've got it");
-  const instruction = `📘 <b>Как пользоваться ботом:</b>
-
-1️⃣ Установи любое VPN приложение, которое поддерживает VLESS протокол. Мы рекомендуем использовать <a href="https://en.v2rayn.org/download/">v2rayN</a> 
-2️⃣ Используй команду /get_url, чтобы получить ссылку конфигурации
-3️⃣ Скопируй ссылку и укажи ее в скачанном приложении
-4️⃣ Заходи раз в N дней обновлять ссылку командой /update_url  
-
-❗Если не удается получить или обновить ссылку — попробуй позже или напиши в поддержку.`;
-
-  await ctx.reply(instruction, { parse_mode: 'HTML',  });
-});
-
-// bot.on("text", async (ctx) => {
-//   await pool.saveUser();
-//   if ((ctx.from.id == ADMIN_ID || ctx.from.id == DEVELOPER_ID) && waitingForBroadcast) {
-//     waitingForBroadcast = false;
-
-//     broadcastInBackground(ctx);
-//     return;
-//   }
-//   await ctx.reply("I've got it");
-//   const instruction = `📘 <b>Как пользоваться ботом:</b>
-
-// 1️⃣ Установи любое VPN приложение, которое поддерживает VLESS протокол. Мы рекомендуем использовать <a href="https://en.v2rayn.org/download/">v2rayN</a> 
-// 2️⃣ Используй команду /get_url, чтобы получить ссылку конфигурации
-// 3️⃣ Скопируй ссылку и укажи ее в скачанном приложении
-// 4️⃣ Заходи раз в N дней обновлять ссылку командой /update_url  
-
-// ❗Если не удается получить или обновить ссылку — попробуй позже или напиши в поддержку.`;
-
-//   await ctx.reply(instruction, { parse_mode: 'HTML',  });
-// });
+// проверка каждый час
+setInterval(sendKeyReminders, 60 * 60 * 1000);
 
 async function broadcastInBackground(ctx) {
   try {
@@ -221,5 +106,316 @@ async function broadcastInBackground(ctx) {
     await ctx.reply("⚠️ Ошибка при запуске рассылки.");
   }
 }
+
+async function showAd(ctx) {
+  // Получаем последнее рекламное сообщение
+    const ad = await pool.getLastAd();
+
+    if (!ad) {
+      await ctx.reply("❗Реклама не найдена. Обратитесь к администратору.");
+      return;
+    }
+
+    // await ctx.telegram.forwardMessage(
+    //   ctx.chat.id,        // куда пересылать
+    //   ad.admin_chat_id,   // источник (админский чат)
+    //   ad.message_id       // id рекламного сообщения
+    // );
+
+    await ctx.telegram.copyMessage(
+      ctx.chat.id,        // куда пересылать
+      ad.admin_chat_id,   // источник (админский чат)
+      ad.message_id       // id рекламного сообщения
+    );
+
+    // Ждём 10 секунд
+    await new Promise(res => setTimeout(res, 10000));
+    return;
+}
+
+async function checkAgree(ctx) {
+  const user = await pool.getUserById(ctx.from.id);
+  return Boolean(user.agreed);
+}
+
+async function updateUrl(ctx) {
+  await pool.saveUser(ctx);
+
+  try {
+    if (!(await checkAgree(ctx))) {
+      return ctx.reply("Сначала подтвердите согласие с документами сервиса.");
+    }
+
+    const url = await pool.getKey(ctx.from.id);
+
+    await showAd(ctx);
+
+    const user = await vpnapi.addUser(ctx.from.id);
+    
+    if (user.success) {
+      if (url.status == 'empty') {
+        await pool.addKey({userId: ctx.from.id, ...user});
+  
+        await ctx.reply('Ваш URL: \n\n<pre>' + user.url + '</pre>',{ parse_mode: 'HTML',
+          ...Markup.keyboard([
+            ['Получить новый ключ'],
+            ['Android', 'IOS'],
+            ['MacOS', 'Windows']
+          ])
+          .resize()
+          .oneTime(false)});
+
+      } else {
+        const uuid = await pool.updateKey({userId: ctx.from.id, ...user});
+
+        await ctx.reply('Ваш новый URL: \n\n<pre>' + user.url + '</pre>',{ parse_mode: 'HTML',  });
+
+        await vpnapi.deleteUser(uuid);
+      }
+    } else {
+      throw new Error('Не удалось добавить пользователя')
+    }
+  } catch(e) {
+    console.error(e);
+    await ctx.reply('К сожалению не получилось создать новый ключ:( \nПопробуйте позже или обратитесь в поддержку')
+  }
+}
+
+async function createUrl(ctx) {
+  await pool.saveUser(ctx);
+
+  try {
+    if (!(await checkAgree(ctx))) {
+      return ctx.reply("Сначала подтвердите согласие с документами сервиса.");
+    }
+
+    await showAd(ctx);
+    
+    const url = await pool.getKey(ctx.from.id);
+    if (url.status == 'empty') {
+      const user = await vpnapi.addUser(ctx.from.id);
+  
+      if (user.success) {
+        await pool.addKey({userId: ctx.from.id, ...user});
+  
+        await ctx.reply('Ваш URL: \n\n<pre>' + user.url + '</pre>',{ parse_mode: 'HTML',
+          ...Markup.keyboard([
+            ['Получить новый ключ'],
+            ['Android', 'IOS'],
+            ['MacOS', 'Windows']
+          ])
+          .resize()
+          .oneTime(false)});
+      } else {
+        throw new Error('Не удалось добавить пользователя')
+      }
+    } else {
+      await ctx.reply('У вас уже есть URL.\nВаш URL: \n\n<pre>' + url.url + '</pre>',{ parse_mode: 'HTML',  });
+    }
+  } catch(e) {
+    console.error(e);
+    await ctx.reply('К сожалению не получилось создать новый ключ:( \nПопробуйте позже или обратитесь в поддержку')
+  }
+}
+
+bot.start(async (ctx) => {
+  await pool.saveUser(ctx);
+  await ctx.reply(
+    `Привет, это VPN +Vibe.
+Тут ты ловишь бесплатные ключи для доступа к свободному интернету — без регистрации, смс и боли.
+
+Что умеет бот:
+  • Выдать свежий VPN-ключ в пару тапов
+  • Подсказать, как подключиться
+  • Напомнить, когда ключ пора обновить.
+
+Жми «Получить ключ» и полетели.`,
+    {
+      parse_mode: "HTML",
+      ...Markup.inlineKeyboard([
+        [Markup.button.callback('Получить ключ', 'get_key')]
+      ])
+    },
+  );
+});
+
+bot.hears('📘 Инструкция',  async (ctx) => {
+  await pool.saveUser(ctx);
+  const instruction = `📘 <b>Как пользоваться ботом:</b>
+
+1️⃣ Установи любое VPN приложение, которое поддерживает VLESS протокол. Мы рекомендуем использовать <a href="https://en.v2rayn.org/download/">v2rayN</a> 
+2️⃣ Используй команду /get_url, чтобы получить ссылку конфигурации
+3️⃣ Скопируй ссылку и укажи ее в скачанном приложении
+4️⃣ Заходи раз в N дней обновлять ссылку командой /update_url  
+
+❗Если не удается получить или обновить ссылку — попробуй позже или напиши в поддержку.`;
+
+  await ctx.reply(instruction, { parse_mode: 'HTML',  });
+});
+
+bot.action('get_key', async (ctx) => {
+  try {
+    await pool.saveUser(ctx);
+  
+    await ctx.answerCbQuery();
+  
+      const user = await pool.getUserById(ctx.from.id);
+  
+      // Если пользователь уже соглашался — пропустить этот шаг
+      if (user.agreed) {
+          return ctx.reply("👍 Ты уже согласился с условиями. Сейчас отправлю ключ...", { parse_mode: 'HTML',
+          ...Markup.keyboard([
+            ['Получить новый ключ'],
+            ['Android', 'IOS'],
+            ['MacOS', 'Windows']
+          ])
+          .resize()
+          .oneTime(false)});
+          // тут можешь выдать ключ или перейти к рекламе
+      }
+  
+      // Если НЕ согласился — отправляем экран согласия
+      await ctx.reply(
+  `Согласие с документами сервиса
+  
+  Перед тем как выдать тебе ключ, нужно чуть-чуть формальностей.
+  Чтобы всё было честно и прозрачно, подтверди, что ты согласен(на) с документами сервиса:
+  
+  📰 Политика конфиденциальности  
+  https://telegra.ph/Politika-konfidencialnosti-08-15-17
+  
+  📄 Пользовательское соглашение  
+  https://telegra.ph/Polzovatelskoe-soglashenie-08-15-10
+  
+  Нажимая кнопку «Даю согласие», ты подтверждаешь, что прочитал(а) и принимаешь условия.`,
+          {
+              parse_mode: "HTML",
+              reply_markup: {
+                  inline_keyboard: [
+                      [{ text: 'Даю согласие', callback_data: 'agree' }]
+                  ]
+              }
+          }
+      );
+  } catch (e) {
+    console.log(e);
+    await ctx.reply('Произошла ошибка');
+  }
+});
+
+bot.action('agree', async (ctx) => {
+    await ctx.answerCbQuery();
+
+    // отмечаем согласие в БД
+    try {
+      await pool.setAgreeUser(ctx);
+
+      await ctx.reply(
+          `Круто, согласие принято — двигаем дальше.\n
++Vibe VPN бесплатный, и чтобы так и оставалось, нужно всего одно маленькое действие с твоей стороны.\n
+Смотри короткий рекламный пост ниже — это помогает держать сервис живым и бесплатным для всех.\n
+Через 10 секунд после просмотра ты автоматически получишь свой ключ доступа.\n
+Когда будешь готов(а), жми кнопку:
+`,
+        {
+            parse_mode: "HTML",
+            reply_markup: {
+                inline_keyboard: [
+                    [{ text: ' Смотреть рекламу и получить ключ', callback_data: 'get_url' }]
+                ]
+            }
+        }
+      );
+    } catch(e) {
+      console.log(e);
+      await ctx.reply(
+          "К сожалению не получилось подтвердить ваше согласие:(\n Побробуйте позже или обратитесь в поддержку"
+      );
+    }
+});
+
+bot.action('get_url', async (ctx) => {
+  await createUrl(ctx);
+})
+
+bot.action('update_url', async (ctx) => {
+  await updateUrl(ctx);
+})
+
+// Храним состояние, ждём сообщение для рассылки
+let waitingForBroadcast = false;
+
+// Команда для старта рассылки
+bot.command('broadcast', async (ctx) => {
+  if (ctx.from.id !== ADMIN_ID && ctx.from.id !== DEVELOPER_ID) return;
+  waitingForBroadcast = true;
+  await ctx.reply('📣 Отправь сообщение, которое нужно разослать (может быть текст, фото, видео, документ, сообщение с кнопками).');
+});
+
+// При получении любого сообщения проверяем, ждёт ли админ рассылку
+bot.on('message', async (ctx) => {
+  if ((ctx.from.id == ADMIN_ID || ctx.from.id == DEVELOPER_ID) && waitingForBroadcast) {
+    waitingForBroadcast = false;
+
+    // сохраняем рекламное сообщение в БД (новое!)
+    await pool.saveAd(ctx.chat.id, ctx.message.message_id);
+    
+    broadcastInBackground(ctx);
+    return;
+  }
+  
+  const text = ctx.message.text;
+
+  switch (text) {
+    case 'Получить новый ключ':
+      // вызываем логику выдачи ключа
+      await updateUrl(ctx)
+      break;
+
+    case 'Android':
+      await ctx.reply('Вот инструкция для Android: https://example.com/android');
+      break;
+
+    case 'IOS':
+      await ctx.reply('Вот инструкция для iOS: https://example.com/ios');
+      break;
+
+    case 'MacOS':
+      await ctx.reply('Вот инструкция для MacOS: https://example.com/macos');
+      break;
+
+    case 'Windows':
+      await ctx.reply('Вот инструкция для Windows: https://example.com/windows');
+      break;
+
+    default:
+      // если сообщение не совпадает с кнопкой, можно проигнорировать
+      // или отправить стандартный ответ
+      // await ctx.reply("Я не понимаю эту команду.");
+      break;
+  }
+});
+
+// bot.on("text", async (ctx) => {
+//   await pool.saveUser();
+//   if ((ctx.from.id == ADMIN_ID || ctx.from.id == DEVELOPER_ID) && waitingForBroadcast) {
+//     waitingForBroadcast = false;
+
+//     broadcastInBackground(ctx);
+//     return;
+//   }
+//   await ctx.reply("I've got it");
+//   const instruction = `📘 <b>Как пользоваться ботом:</b>
+
+// 1️⃣ Установи любое VPN приложение, которое поддерживает VLESS протокол. Мы рекомендуем использовать <a href="https://en.v2rayn.org/download/">v2rayN</a> 
+// 2️⃣ Используй команду /get_url, чтобы получить ссылку конфигурации
+// 3️⃣ Скопируй ссылку и укажи ее в скачанном приложении
+// 4️⃣ Заходи раз в N дней обновлять ссылку командой /update_url  
+
+// ❗Если не удается получить или обновить ссылку — попробуй позже или напиши в поддержку.`;
+
+//   await ctx.reply(instruction, { parse_mode: 'HTML',  });
+// });
+
 
 bot.launch().catch(() => waitingForBroadcast = false);

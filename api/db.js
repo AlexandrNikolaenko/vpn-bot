@@ -12,6 +12,21 @@ class DB {
     });
   }
 
+  // ========== Функция получения информации о пользователе по id ==========
+  async getUserById(id) {
+    try {
+      const [res] = await this.pool.query(`
+        SELECT *
+        FROM users
+        WHERE chat_id = ?
+        LIMIT 1
+      `, [id]);
+      return res[0];
+    } catch (err) {
+      console.error('Ошибка получения пользователя:', err);
+    }
+  }
+
   // ========== Функция сохранения пользователя ==========
   async saveUser(ctx) {
     const { id: chat_id, username, first_name } = ctx.from;
@@ -26,6 +41,37 @@ class DB {
     }
   }
 
+  // ========== Функция обновления состояния согласия ==========
+  async setAgreeUser(ctx) {
+    const chatId = ctx.from.id;
+
+    try {
+      // Обновляем пользователя
+      const [result] = await this.pool.query(
+        `UPDATE users SET agreed = 1 WHERE chat_id = ?`,
+        [chatId]
+      );
+
+      if (result.affectedRows === 0) {
+        console.warn(`setAgreeUser: user with chat_id=${chatId} not found`);
+        return null;
+      }
+
+      // Возвращаем обновлённые данные пользователя (по желанию)
+      const [rows] = await this.pool.query(
+        `SELECT * FROM users WHERE chat_id = ? LIMIT 1`,
+        [chatId]
+      );
+
+      return rows[0];
+
+    } catch (err) {
+      console.error("DB ERROR in setAgreeUser:", err);
+      throw err;
+    }
+  }
+
+  // ========== Функция получуения ключа пользователя ==========
   async getKey(chat_id) {
     try {
       const [user] = await this.pool.query(`
@@ -54,6 +100,10 @@ class DB {
     const {userId: chat_id, uuid, email, subId: sub_id, url} = user;
     try {
       const [user] = await this.pool.query(`SELECT * FROM users WHERE chat_id = ${chat_id}`);
+
+      if (!user[0]) {
+        throw new Error(`Пользователь с chat_id=${chat_id} не найден`);
+      }
       
       const user_id = user[0].id;
 
@@ -62,9 +112,22 @@ class DB {
         VALUES (?, ?, ?, ?, ?)
       `, [user_id, uuid, sub_id, email, url]);
 
+      // 3. Обновляем last_key_at для пользователя
+      await this.pool.execute(
+        `UPDATE users SET last_key_at = NOW() WHERE id = ?`,
+        [user_id]
+      );
+
       setTimeout(() => {
-        this.pool.execute(`DELETE FROM vpn_keys WHERE uuid = '${uuid}'`)
-      }, 1000 * 60 * 2);
+        try {
+          this.pool.execute(
+            `DELETE FROM vpn_keys WHERE uuid = ?`,
+            [uuid]
+          );
+        } catch (e) {
+          console.error('Ошибка удаления VPN ключа по таймауту:', e);
+        }
+      }, 1000 * 60 * 60 * 24 * 7);
 
     } catch(e) {
       console.error('Ошибка сохранения пользователя:', e);
@@ -105,6 +168,32 @@ class DB {
     }
   }
 
+  // ========== Функция сохранения рекламы ==========
+  async saveAd(chatId, messageId) {
+    try {
+      await this.pool.query(
+        `INSERT INTO ads (admin_chat_id, message_id, created_at)
+        VALUES (?, ?, NOW())`,
+        [chatId, messageId]
+      );
+    } catch(e) {
+      console.log(e);
+      throw e;
+    }
+  }
+
+  async getLastAd() {
+    try {
+      const [rows] = await this.pool.query(
+        "SELECT * FROM ads ORDER BY created_at DESC LIMIT 1"
+      );
+      return rows[0] || null;
+    } catch(e) {
+      console.log(e);
+      throw e;
+    }
+  }
+
   // ========== Создание таблицы ==========
   async initDB() {
     await this.pool.query(`
@@ -113,6 +202,9 @@ class DB {
         chat_id BIGINT UNIQUE,
         username VARCHAR(255),
         first_name VARCHAR(255),
+        agreed TINYINT(1) DEFAULT 0,
+        last_key_at DATETIME DEFAULT NULL;
+        is_reminded TINYINT(1) DEFAULT 0;
         last_seen DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       );
       CREATE TABLE IF NOT EXISTS vpn_keys (
@@ -124,6 +216,12 @@ class DB {
         url VARCHAR(255),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+      CREATE TABLE IF NOT EXISTS ads (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        admin_chat_id BIGINT NOT NULL,
+        message_id BIGINT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
   }

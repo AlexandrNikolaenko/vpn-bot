@@ -219,7 +219,7 @@ class VPN {
                   email,
                   limitIp: 0,
                   totalGB: 0,
-                  expiryTime: 0,
+                  expiryTime: Date.now() + (1000 * 60 * 60 * 24 * 7),
                   enable: true,
                   tgId: "",
                   subId,
