@@ -158,9 +158,9 @@ async function updateUrl(ctx) {
   
         await ctx.reply('Ваш URL: \n\n<pre>' + user.url + '</pre>',{ parse_mode: 'HTML',
           ...Markup.keyboard([
-            ['Получить новый ключ'],
-            ['Android', 'IOS'],
-            ['MacOS', 'Windows']
+            ['🔄 Получить новый ключ'],
+            ['📱 Android', '🍏 iOS'],
+            ['💻 MacOS', '🖥 Windows']
           ])
           .resize()
           .oneTime(false)});
@@ -200,9 +200,9 @@ async function createUrl(ctx) {
   
         await ctx.reply('Ваш URL: \n\n<pre>' + user.url + '</pre>',{ parse_mode: 'HTML',
           ...Markup.keyboard([
-            ['Получить новый ключ'],
-            ['Android', 'IOS'],
-            ['MacOS', 'Windows']
+            ['🔄 Получить новый ключ'],
+            ['📱 Android', '🍏 iOS'],
+            ['💻 MacOS', '🖥 Windows']
           ])
           .resize()
           .oneTime(false)});
@@ -211,9 +211,9 @@ async function createUrl(ctx) {
       }
     } else {
       await ctx.reply('У вас уже есть URL.\nВаш URL: \n\n<pre>' + url.url + '</pre>',{ parse_mode: 'HTML', ...Markup.keyboard([
-            ['Получить новый ключ'],
-            ['Android', 'IOS'],
-            ['MacOS', 'Windows']
+            ['🔄 Получить новый ключ'],
+            ['📱 Android', '🍏 iOS'],
+            ['💻 MacOS', '🖥 Windows']
           ])
           .resize()
           .oneTime(false)});
@@ -227,36 +227,23 @@ async function createUrl(ctx) {
 bot.start(async (ctx) => {
   await pool.saveUser(ctx);
   await ctx.reply(
-    `Привет, это VPN +Vibe.
-Тут ты ловишь бесплатные ключи для доступа к свободному интернету — без регистрации, смс и боли.
+    `👋 Привет, это VPN +Vibe!
 
-Что умеет бот:
-  • Выдать свежий VPN-ключ в пару тапов
-  • Подсказать, как подключиться
-  • Напомнить, когда ключ пора обновить.
+Здесь ты ловишь 🔑 бесплатные ключи для доступа к свободному интернету — без регистрации, смс и боли.
 
-Жми «Получить ключ» и полетели.`,
+✨ Что умеет бот:
+• ⚡ Выдать свежий VPN-ключ в пару тапов  
+• 📘 Подсказать, как подключиться  
+• ⏰ Напомнить, когда ключ пора обновить  
+
+Жми «Получить ключ» и полетели 🚀`,
     {
       parse_mode: "HTML",
       ...Markup.inlineKeyboard([
-        [Markup.button.callback('Получить ключ', 'get_key')]
+        [Markup.button.callback('🔑 Получить ключ', 'get_key')]
       ])
     },
   );
-});
-
-bot.hears('📘 Инструкция',  async (ctx) => {
-  await pool.saveUser(ctx);
-  const instruction = `📘 <b>Как пользоваться ботом:</b>
-
-1️⃣ Установи любое VPN приложение, которое поддерживает VLESS протокол. Мы рекомендуем использовать <a href="https://en.v2rayn.org/download/">v2rayN</a> 
-2️⃣ Используй команду /get_url, чтобы получить ссылку конфигурации
-3️⃣ Скопируй ссылку и укажи ее в скачанном приложении
-4️⃣ Заходи раз в N дней обновлять ссылку командой /update_url  
-
-❗Если не удается получить или обновить ссылку — попробуй позже или напиши в поддержку.`;
-
-  await ctx.reply(instruction, { parse_mode: 'HTML',  });
 });
 
 bot.action('get_key', async (ctx) => {
@@ -271,9 +258,9 @@ bot.action('get_key', async (ctx) => {
       if (user.agreed) {
           return ctx.reply("👍 Ты уже согласился с условиями. Сейчас отправлю ключ...", { parse_mode: 'HTML',
           ...Markup.keyboard([
-            ['Получить новый ключ'],
-            ['Android', 'IOS'],
-            ['MacOS', 'Windows']
+            ['🔄 Получить новый ключ'],
+            ['📱 Android', '🍏 iOS'],
+            ['💻 MacOS', '🖥 Windows']
           ])
           .resize()
           .oneTime(false)});
@@ -282,18 +269,17 @@ bot.action('get_key', async (ctx) => {
   
       // Если НЕ согласился — отправляем экран согласия
       await ctx.reply(
-  `Согласие с документами сервиса
-  
-  Перед тем как выдать тебе ключ, нужно чуть-чуть формальностей.
-  Чтобы всё было честно и прозрачно, подтверди, что ты согласен(на) с документами сервиса:
-  
-  📰 Политика конфиденциальности  
-  https://telegra.ph/Politika-konfidencialnosti-08-15-17
-  
-  📄 Пользовательское соглашение  
-  https://telegra.ph/Polzovatelskoe-soglashenie-08-15-10
-  
-  Нажимая кнопку «Даю согласие», ты подтверждаешь, что прочитал(а) и принимаешь условия.`,
+  `📄 Перед тем как выдать тебе ключ, нужно чуть-чуть формальностей.
+
+Чтобы всё было честно и прозрачно, подтверди, что ты согласен(на) с документами сервиса:
+
+📰 Политика конфиденциальности  
+https://telegra.ph/Politika-konfidencialnosti-08-15-17
+
+📑 Пользовательское соглашение  
+https://telegra.ph/Polzovatelskoe-soglashenie-08-15-10
+
+Нажимая кнопку «Даю согласие», ты подтверждаешь, что прочитал(а) и принимаешь условия ✔️`,
           {
               parse_mode: "HTML",
               reply_markup: {
@@ -305,7 +291,7 @@ bot.action('get_key', async (ctx) => {
       );
   } catch (e) {
     console.log(e);
-    await ctx.reply('Произошла ошибка');
+    await ctx.reply('Произошла ошибка');  
   }
 });
 
@@ -317,11 +303,15 @@ bot.action('agree', async (ctx) => {
       await pool.setAgreeUser(ctx);
 
       await ctx.reply(
-          `Круто, согласие принято — двигаем дальше.\n
-+Vibe VPN бесплатный, и чтобы так и оставалось, нужно всего одно маленькое действие с твоей стороны.\n
-Смотри короткий рекламный пост ниже — это помогает держать сервис живым и бесплатным для всех.\n
-Через 10 секунд после просмотра ты автоматически получишь свой ключ доступа.\n
-Когда будешь готов(а), жми кнопку:
+          `🎉 Круто, согласие принято — двигаем дальше!
+
++Vibe VPN бесплатный, и чтобы так и оставалось, нужно всего одно маленькое действие с твоей стороны.
+
+Посмотри короткий рекламный пост ниже — это помогает держать сервис живым и бесплатным для всех ❤️
+
+⏳ Через 10 секунд после просмотра ты автоматически получишь свой ключ доступа.
+
+Когда будешь готов(а), жми кнопку 👇
 `,
         {
             parse_mode: "HTML",
@@ -379,49 +369,25 @@ bot.on('message', async (ctx) => {
       break;
 
     case 'Android':
-      await ctx.reply('Вот инструкция для Android: https://example.com/android');
+      await ctx.reply('📱 Инструкция для Android: https://zentrolamia.xyz/docs/instructions/v2raytun/');
       break;
 
     case 'IOS':
-      await ctx.reply('Вот инструкция для iOS: https://example.com/ios');
+      await ctx.reply('🍏 Инструкция для iOS: https://apps.apple.com/lt/app/v2raytun/id6476628951');
       break;
 
     case 'MacOS':
-      await ctx.reply('Вот инструкция для MacOS: https://example.com/macos');
+      await ctx.reply('💻 Инструкция для MacOS: https://apps.apple.com/lt/app/v2raytun/id6476628951');
       break;
 
     case 'Windows':
-      await ctx.reply('Вот инструкция для Windows: https://example.com/windows');
+      await ctx.reply('🖥 Инструкция для Windows: https://storage.v2raytun.com/v2RayTun_Setup.exe');
       break;
 
     default:
-      // если сообщение не совпадает с кнопкой, можно проигнорировать
-      // или отправить стандартный ответ
-      // await ctx.reply("Я не понимаю эту команду.");
+      await ctx.reply("Я не понимаю эту команду.");
       break;
   }
 });
-
-// bot.on("text", async (ctx) => {
-//   await pool.saveUser();
-//   if ((ctx.from.id == ADMIN_ID || ctx.from.id == DEVELOPER_ID) && waitingForBroadcast) {
-//     waitingForBroadcast = false;
-
-//     broadcastInBackground(ctx);
-//     return;
-//   }
-//   await ctx.reply("I've got it");
-//   const instruction = `📘 <b>Как пользоваться ботом:</b>
-
-// 1️⃣ Установи любое VPN приложение, которое поддерживает VLESS протокол. Мы рекомендуем использовать <a href="https://en.v2rayn.org/download/">v2rayN</a> 
-// 2️⃣ Используй команду /get_url, чтобы получить ссылку конфигурации
-// 3️⃣ Скопируй ссылку и укажи ее в скачанном приложении
-// 4️⃣ Заходи раз в N дней обновлять ссылку командой /update_url  
-
-// ❗Если не удается получить или обновить ссылку — попробуй позже или напиши в поддержку.`;
-
-//   await ctx.reply(instruction, { parse_mode: 'HTML',  });
-// });
-
 
 bot.launch().catch(() => waitingForBroadcast = false);
