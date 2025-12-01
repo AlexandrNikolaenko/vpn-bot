@@ -367,24 +367,24 @@ bot.on('message', async (ctx) => {
   const text = ctx.message.text;
 
   switch (text) {
-    case 'Получить новый ключ':
+    case '🔄 Получить новый ключ':
       // вызываем логику выдачи ключа
       await updateUrl(ctx)
       break;
 
-    case 'Android':
+    case '📱 Android':
       await ctx.reply('📱 Инструкция для Android: https://zentrolamia.xyz/docs/instructions/v2raytun/');
       break;
 
-    case 'IOS':
+    case '🍏 IOS':
       await ctx.reply('🍏 Инструкция для iOS: https://apps.apple.com/lt/app/v2raytun/id6476628951');
       break;
 
-    case 'MacOS':
+    case '💻 MacOS':
       await ctx.reply('💻 Инструкция для MacOS: https://apps.apple.com/lt/app/v2raytun/id6476628951');
       break;
 
-    case 'Windows':
+    case '🖥 Windows':
       await ctx.reply('🖥 Инструкция для Windows: https://storage.v2raytun.com/v2RayTun_Setup.exe');
       break;
 
