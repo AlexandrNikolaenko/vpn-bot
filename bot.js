@@ -159,7 +159,7 @@ async function updateUrl(ctx) {
         await ctx.reply('Ваш URL: \n\n<pre>' + user.url + '</pre>',{ parse_mode: 'HTML',
           ...Markup.keyboard([
             ['🔄 Получить новый ключ'],
-            ['📱 Android', '🍏 iOS'],
+            ['📱 Android', '🍏 IOS'],
             ['💻 MacOS', '🖥 Windows']
           ])
           .resize()
@@ -201,7 +201,7 @@ async function createUrl(ctx) {
         await ctx.reply('Ваш URL: \n\n<pre>' + user.url + '</pre>',{ parse_mode: 'HTML',
           ...Markup.keyboard([
             ['🔄 Получить новый ключ'],
-            ['📱 Android', '🍏 iOS'],
+            ['📱 Android', '🍏 IOS'],
             ['💻 MacOS', '🖥 Windows']
           ])
           .resize()
@@ -212,7 +212,7 @@ async function createUrl(ctx) {
     } else {
       await ctx.reply('У вас уже есть URL.\nВаш URL: \n\n<pre>' + url.url + '</pre>',{ parse_mode: 'HTML', ...Markup.keyboard([
             ['🔄 Получить новый ключ'],
-            ['📱 Android', '🍏 iOS'],
+            ['📱 Android', '🍏 IOS'],
             ['💻 MacOS', '🖥 Windows']
           ])
           .resize()
@@ -259,7 +259,7 @@ bot.action('get_key', async (ctx) => {
           ctx.reply("👍 Ты уже согласился с условиями. Сейчас отправлю ключ...", { parse_mode: 'HTML',
           ...Markup.keyboard([
             ['🔄 Получить новый ключ'],
-            ['📱 Android', '🍏 iOS'],
+            ['📱 Android', '🍏 IOS'],
             ['💻 MacOS', '🖥 Windows']
           ])
           .resize()
@@ -377,7 +377,7 @@ bot.on('message', async (ctx) => {
       break;
 
     case '🍏 IOS':
-      await ctx.reply('🍏 Инструкция для iOS: https://apps.apple.com/lt/app/v2raytun/id6476628951');
+      await ctx.reply('🍏 Инструкция для IOS: https://apps.apple.com/lt/app/v2raytun/id6476628951');
       break;
 
     case '💻 MacOS':
