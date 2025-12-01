@@ -256,7 +256,7 @@ bot.action('get_key', async (ctx) => {
   
       // Если пользователь уже соглашался — пропустить этот шаг
       if (user.agreed) {
-          return ctx.reply("👍 Ты уже согласился с условиями. Сейчас отправлю ключ...", { parse_mode: 'HTML',
+          ctx.reply("👍 Ты уже согласился с условиями. Сейчас отправлю ключ...", { parse_mode: 'HTML',
           ...Markup.keyboard([
             ['🔄 Получить новый ключ'],
             ['📱 Android', '🍏 iOS'],
@@ -264,7 +264,11 @@ bot.action('get_key', async (ctx) => {
           ])
           .resize()
           .oneTime(false)});
-          // тут можешь выдать ключ или перейти к рекламе
+          
+          await showAd(ctx);
+          
+          await updateUrl(ctx);
+          return;
       }
   
       // Если НЕ согласился — отправляем экран согласия
