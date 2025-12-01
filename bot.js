@@ -265,8 +265,6 @@ bot.action('get_key', async (ctx) => {
           .resize()
           .oneTime(false)});
           
-          await showAd(ctx);
-          
           await updateUrl(ctx);
           return;
       }
@@ -373,19 +371,19 @@ bot.on('message', async (ctx) => {
       break;
 
     case '📱 Android':
-      await ctx.reply('📱 Инструкция для Android: https://zentrolamia.xyz/docs/instructions/v2raytun/');
+      await ctx.reply('📱 Приложение для Android: https://zentrolamia.xyz/docs/instructions/v2raytun/');
       break;
 
     case '🍏 IOS':
-      await ctx.reply('🍏 Инструкция для IOS: https://apps.apple.com/lt/app/v2raytun/id6476628951');
+      await ctx.reply('🍏 Приложение для IOS: https://apps.apple.com/lt/app/v2raytun/id6476628951');
       break;
 
     case '💻 MacOS':
-      await ctx.reply('💻 Инструкция для MacOS: https://apps.apple.com/lt/app/v2raytun/id6476628951');
+      await ctx.reply('💻 Приложение для MacOS: https://apps.apple.com/lt/app/v2raytun/id6476628951');
       break;
 
     case '🖥 Windows':
-      await ctx.reply('🖥 Инструкция для Windows: https://storage.v2raytun.com/v2RayTun_Setup.exe');
+      await ctx.reply('🖥 Приложение для Windows: https://storage.v2raytun.com/v2RayTun_Setup.exe');
       break;
 
     default:
