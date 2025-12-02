@@ -253,7 +253,7 @@ async function instruction(ctx) {
             }
         })
     } else {
-      await ctx.replyWithPhoto({source: path.join(__dirname, 'img', 'key.jpg')}, {caption: 'Ваш URL: \n\n<pre>' + url.url + '</pre>\n\nСкопируйте url-конфигурацию и вставьте его в приложении.\n\nУкажите ваше устройство и перейдете на страницу для скачивания приложения', parse_mode: 'HTML', ...Markup.inlineKeyboard([
+      await ctx.replyWithPhoto({source: path.join(__dirname, 'img', 'instruction.jpg')}, {caption: 'Ваш URL: \n\n<pre>' + url.url + '</pre>\n\nСкопируйте url-конфигурацию и вставьте его в приложении.\n\nУкажите ваше устройство и перейдете на страницу для скачивания приложения', parse_mode: 'HTML', ...Markup.inlineKeyboard([
             [{text: '📱 Android', url: 'https://zentrolamia.xyz/docs/instructions/v2raytun/'}, {text: '🍏 IOS', url: 'https://apps.apple.com/lt/app/v2raytun/id6476628951'}],
             [{text: '💻 MacOS', url: 'https://apps.apple.com/lt/app/v2raytun/id6476628951'}, {text: '🖥 Windows', url: 'https://storage.v2raytun.com/v2RayTun_Setup.exe'}]
           ])
@@ -346,7 +346,7 @@ bot.action('get_key', async (ctx) => {
   
       // Если пользователь уже соглашался — пропустить этот шаг
       if (user.agreed) {
-          ctx.reply("👍 Ты уже согласился с условиями. Сейчас отправлю ключ...", { parse_mode: 'HTML',
+          ctx.replyWithPhoto({source: path.join(__dirname, 'img', 'access.jpg')}, { caption: "👍 Ты уже согласился с условиями. Сейчас отправлю ключ...", parse_mode: 'HTML',
           ...Markup.keyboard([
             ['🔄 Получить новый ключ', '🔑 Мой ключ'],
             ['📘 Инструкция', 'Поддержка']
@@ -359,8 +359,10 @@ bot.action('get_key', async (ctx) => {
       }
   
       // Если НЕ согласился — отправляем экран согласия
-      await ctx.reply(
-  `📄 Перед тем как выдать тебе ключ, нужно чуть-чуть формальностей.
+      await ctx.replyWithPhoto(
+          {source: path.join(__dirname, 'img', 'access.jpg')},
+          {
+            caption: `📄 Перед тем как выдать тебе ключ, нужно чуть-чуть формальностей.
 
 Чтобы всё было честно и прозрачно, подтверди, что ты согласен(на) с документами сервиса:
 
@@ -371,7 +373,6 @@ https://telegra.ph/Politika-konfidencialnosti-08-15-17
 https://telegra.ph/Polzovatelskoe-soglashenie-08-15-10
 
 Нажимая кнопку «Даю согласие», ты подтверждаешь, что прочитал(а) и принимаешь условия ✔️`,
-          {
               parse_mode: "HTML",
               reply_markup: {
                   inline_keyboard: [
