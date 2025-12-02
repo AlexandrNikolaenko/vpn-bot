@@ -1,5 +1,4 @@
 const { Telegraf, Markup } = require("telegraf");
-const fs = require("fs");
 const path = require("path");
 const vpnapi = require('./api/vpnapi.js');
 const pool = require('./api/db.js');
@@ -155,25 +154,112 @@ async function updateUrl(ctx) {
     if (user.success) {
       if (url.status == 'empty') {
         await pool.addKey({userId: ctx.from.id, ...user});
-  
-        await ctx.reply('Ваш URL: \n\n<pre>' + user.url + '</pre>',{ parse_mode: 'HTML',
-          ...Markup.keyboard([
-            ['🔄 Получить новый ключ'],
-            ['📱 Android', '🍏 IOS'],
-            ['💻 MacOS', '🖥 Windows']
-          ])
-          .resize()
-          .oneTime(false)});
+
+        await ctx.replyWithPhoto(
+          { source: path.join(__dirname, 'img', 'key.jpg') }, // картинка из той же директории
+          {
+            caption: 'Ваш URL: \n\n<pre>' + user.url + '</pre>',
+            parse_mode: 'HTML',
+            ...Markup.keyboard([
+                ['🔄 Получить новый ключ', '🔑 Мой ключ'],
+                ['📘 Инструкция', 'Поддержка']
+            ])
+            .resize()
+            .oneTime(false)
+          }
+        );
 
       } else {
         const uuid = await pool.updateKey({userId: ctx.from.id, ...user});
 
-        await ctx.reply('Ваш новый URL: \n\n<pre>' + user.url + '</pre>',{ parse_mode: 'HTML',  });
+        await ctx.replyWithPhoto({ source: path.join(__dirname, 'img', 'key.jpg') }, {
+          caption: 'Ваш новый URL: \n\n<pre>' + user.url + '</pre>', 
+          parse_mode: 'HTML', 
+          ...Markup.keyboard([
+            ['🔄 Получить новый ключ', '🔑 Мой ключ'],
+            ['📘 Инструкция', 'Поддержка']
+          ])
+          .resize()
+          .oneTime(false)});
 
         await vpnapi.deleteUser(uuid);
       }
     } else {
       throw new Error('Не удалось добавить пользователя')
+    }
+  } catch(e) {
+    console.error(e);
+    await ctx.reply('К сожалению не получилось создать новый ключ:( \nПопробуйте позже или обратитесь в поддержку')
+  }
+}
+
+async function support(ctx) {
+  await ctx.reply('Чтобы сообщить об ошибке или получить помощь по какому-либо вопросу, можете обратиться в канал поддержки - @support-channel')
+}
+
+async function getUserURL(ctx) {
+  await pool.saveUser(ctx);
+
+  try {
+    if (!(await checkAgree(ctx))) {
+      return ctx.reply("Сначала подтвердите согласие с документами сервиса.");
+    }
+
+    
+    const url = await pool.getKey(ctx.from.id);
+    if (url.status == 'empty') {
+      await ctx.replyWithPhoto(
+          { source: path.join(__dirname, 'img', 'key.jpg') },
+          {caption: 'Сейчас у вас нет активных ключей, вы можете получить ключ посмотрев рекламу', 
+            parse_mode: "HTML",
+            reply_markup: {
+                inline_keyboard: [
+                    [{ text: ' Смотреть рекламу и получить ключ', callback_data: 'get_url' }]
+                ]
+            }
+        })
+    } else {
+      await ctx.replyWithPhoto(
+          { source: path.join(__dirname, 'img', 'key.jpg') }, {caption: 'Ваш URL: \n\n<pre>' + url.url + '</pre>\n\n', parse_mode: 'HTML', ...Markup.keyboard([
+            ['🔄 Получить новый ключ', '🔑 Мой ключ'],
+            ['📘 Инструкция', 'Поддержка']
+          ])
+          .resize()
+          .oneTime(false)});
+    }
+  } catch(e) {
+    console.error(e);
+    await ctx.reply('К сожалению не получилось создать новый ключ:( \nПопробуйте позже или обратитесь в поддержку')
+  }
+}
+
+async function instruction(ctx) {
+  await pool.saveUser(ctx);
+
+  try {
+    if (!(await checkAgree(ctx))) {
+      return ctx.reply("Сначала подтвердите согласие с документами сервиса.");
+    }
+
+    
+    const url = await pool.getKey(ctx.from.id);
+    if (url.status == 'empty') {
+      await ctx.reply('Сначала нужно получить ключ', {
+            parse_mode: "HTML",
+            reply_markup: {
+                inline_keyboard: [
+                    [{ text: ' Смотреть рекламу и получить ключ', callback_data: 'get_url' }]
+                ]
+            }
+        })
+    } else {
+      await ctx.replyWithPhoto({source: path.join(__dirname, 'img', 'key.jpg')}, {caption: 'Ваш URL: \n\n<pre>' + url.url + '</pre>\n\nСкопируйте url-конфигурацию и вставьте его в приложении.\n\nУкажите ваше устройство и перейдете на страницу для скачивания приложения', parse_mode: 'HTML', ...Markup.inlineKeyboard([
+            [{text: '📱 Android', url: 'https://zentrolamia.xyz/docs/instructions/v2raytun/'}, {text: '🍏 IOS', url: 'https://apps.apple.com/lt/app/v2raytun/id6476628951'}],
+            [{text: '💻 MacOS', url: 'https://apps.apple.com/lt/app/v2raytun/id6476628951'}, {text: '🖥 Windows', url: 'https://storage.v2raytun.com/v2RayTun_Setup.exe'}]
+          ])
+          .resize()
+          .oneTime(false)});
+      
     }
   } catch(e) {
     console.error(e);
@@ -189,31 +275,35 @@ async function createUrl(ctx) {
       return ctx.reply("Сначала подтвердите согласие с документами сервиса.");
     }
 
-    await showAd(ctx);
     
     const url = await pool.getKey(ctx.from.id);
     if (url.status == 'empty') {
+      await showAd(ctx);
       const user = await vpnapi.addUser(ctx.from.id);
   
       if (user.success) {
         await pool.addKey({userId: ctx.from.id, ...user});
   
-        await ctx.reply('Ваш URL: \n\n<pre>' + user.url + '</pre>',{ parse_mode: 'HTML',
-          ...Markup.keyboard([
-            ['🔄 Получить новый ключ'],
-            ['📱 Android', '🍏 IOS'],
-            ['💻 MacOS', '🖥 Windows']
-          ])
-          .resize()
-          .oneTime(false)});
+        await ctx.replyWithPhoto(
+          { source: path.join(__dirname, 'img', 'key.jpg') }, // картинка из той же директории
+          {
+            caption: 'Ваш URL: \n\n<pre>' + user.url + '</pre>',
+            parse_mode: 'HTML',
+            ...Markup.keyboard([
+                ['🔄 Получить новый ключ', '🔑 Мой ключ'],
+                ['📘 Инструкция', 'Поддержка']
+            ])
+            .resize()
+            .oneTime(false)
+          }
+        );
       } else {
         throw new Error('Не удалось добавить пользователя')
       }
     } else {
-      await ctx.reply('У вас уже есть URL.\nВаш URL: \n\n<pre>' + url.url + '</pre>',{ parse_mode: 'HTML', ...Markup.keyboard([
-            ['🔄 Получить новый ключ'],
-            ['📱 Android', '🍏 IOS'],
-            ['💻 MacOS', '🖥 Windows']
+      await ctx.reply('Ваш URL: \n\n<pre>' + url.url + '</pre>\n\n',{ parse_mode: 'HTML', ...Markup.inlineKeyboard([
+            ['🔄 Получить новый ключ', '🔑 Мой ключ'],
+            ['📘 Инструкция', 'Поддержка']
           ])
           .resize()
           .oneTime(false)});
@@ -258,9 +348,8 @@ bot.action('get_key', async (ctx) => {
       if (user.agreed) {
           ctx.reply("👍 Ты уже согласился с условиями. Сейчас отправлю ключ...", { parse_mode: 'HTML',
           ...Markup.keyboard([
-            ['🔄 Получить новый ключ'],
-            ['📱 Android', '🍏 IOS'],
-            ['💻 MacOS', '🖥 Windows']
+            ['🔄 Получить новый ключ', '🔑 Мой ключ'],
+            ['📘 Инструкция', 'Поддержка']
           ])
           .resize()
           .oneTime(false)});
@@ -365,29 +454,21 @@ bot.on('message', async (ctx) => {
   const text = ctx.message.text;
 
   switch (text) {
+    case '📘 Инструкция':
+
+      await instruction(ctx);
+      break
     case '🔄 Получить новый ключ':
       // вызываем логику выдачи ключа
       await updateUrl(ctx)
       break;
 
-    case '📱 Android':
-      await ctx.reply('📱 Приложение для Android: https://zentrolamia.xyz/docs/instructions/v2raytun/');
-      break;
-
-    case '🍏 IOS':
-      await ctx.reply('🍏 Приложение для IOS: https://apps.apple.com/lt/app/v2raytun/id6476628951');
-      break;
-
-    case '💻 MacOS':
-      await ctx.reply('💻 Приложение для MacOS: https://apps.apple.com/lt/app/v2raytun/id6476628951');
-      break;
-
-    case '🖥 Windows':
-      await ctx.reply('🖥 Приложение для Windows: https://storage.v2raytun.com/v2RayTun_Setup.exe');
+    case '🔑 Мой ключ':
+      await getUserURL(ctx);
       break;
 
     default:
-      await ctx.reply("Я не понимаю эту команду.");
+      await support(ctx);
       break;
   }
 });
