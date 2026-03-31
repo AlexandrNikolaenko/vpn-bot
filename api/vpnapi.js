@@ -2,7 +2,7 @@ require("dotenv").config();
 
 const crypto = require('crypto');
 
-const BASE_URL = "http://2.58.65.216:54321/QdV3cAqpJAikqbJ7qx";
+const BASE_URL = proccess.env.BASE_URL;
 
 async function loginGetCookie() {
   const res = await fetch(`${BASE_URL}/login`, {
@@ -28,11 +28,8 @@ async function loginGetCookie() {
 }
 
 async function getUUID() {
-  // const res = await fetch('http://2.58.65.216:54321/QdV3cAqpJAikqbJ7qx/panel/api/server/getNewUUID');
-  // console.log(res);
-  // return await res.json();
 
-  const res = await fetch('http://2.58.65.216:54321/QdV3cAqpJAikqbJ7qx/panel/api/server/getNewUUID', {
+  const res = await fetch(BASE_URL + '/panel/api/server/getNewUUID', {
     method: 'GET',
     headers: {
       'Cookie': COOKIE
@@ -75,7 +72,7 @@ async function addUser() {
         }
       }));
 
-      const newUser = await fetch('http://2.58.65.216:54321/QdV3cAqpJAikqbJ7qx/panel/api/inbounds/addClient',  {
+      const newUser = await fetch(BASE_URL + '/panel/api/inbounds/addClient',  {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -118,7 +115,7 @@ async function addUser() {
 
 async function deleteUser() {
   try {
-    const delUser = await fetch('http://2.58.65.216:54321/QdV3cAqpJAikqbJ7qx/panel/api/inbounds/1/delClient/a050d65f-e26d-4536-b6e3-1a530d3e9962',  {
+    const delUser = await fetch(BASE_URL + '/panel/api/inbounds/1/delClient/a050d65f-e26d-4536-b6e3-1a530d3e9962',  {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -143,7 +140,7 @@ async function deleteUser() {
 
 class VPN {
   constructor() {
-    this.basePath = "http://2.58.65.216:54321/QdV3cAqpJAikqbJ7qx";
+    this.basePath = BASE_URL;
     this.username = process.env.VPN_USERNAME;
     this.password = process.env.VPN_PASSWORD;
     this.cookie;
